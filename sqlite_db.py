@@ -391,10 +391,15 @@ async def update_account_session(phone, session):
     ''', (session, phone))
     db.commit()
 
-async def add_account(api_id, api_hash, phone, session):
-    cur.execute("INSERT INTO accounts(api_id, api_hash, phone, session_accounts=) VALUES (?, ?, ?, ?)",
-                (api_id, api_hash, phone, session))
-    db.commit()
+async def add_account(state, session):
+    try:
+        async with state.proxy() as data:
+            cur.execute("INSERT INTO accounts(api_id, api_hash, phone, session_accounts=) VALUES (?, ?, ?, ?)",
+                        (data['api_id'], data['api_hash'], data['phone'], session))
+            db.commit()
+            print('add account')
+    except Exception as e:
+        print(e)
 
 
 async def add_proxy(state):

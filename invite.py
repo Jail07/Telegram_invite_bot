@@ -16,31 +16,28 @@ from telethon.tl.functions.channels import InviteToChannelRequest
 from telethon.tl.types import UserStatusEmpty
 from telethon.errors.rpcerrorlist import PeerFloodError, UserPrivacyRestrictedError, FloodWaitError
 import sqlite_db as db
-from config import API_TOKEN
+
+
+
+API_TOKEN = '7106820685:AAEUFXhYrPL7hIVdQPQXuVeWmLA_5MtXOko'
+
 
 async def on_startup():
     await db.db_start()
-    print('Бот запущен!2')
-
+    print('Бот запущен!')
 
 # Настройка журнала
 logging.basicConfig(level=logging.WARNING)
 
 # Путь к папке с сессиями
-folder_session = './addmember-telegram-master/session_accounts/'
+folder_session = './session_accounts/'
 
 # Путь к конфигурационному файлу
-config_path = './addmember-telegram-master/config.json'
 
 # Инициализация бота и диспетчера
 bot = Bot(API_TOKEN)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
-
-# def load_config(path):
-#     """Загрузка конфигурационного файла"""
-#     with open(path, 'r', encoding='utf-8') as f:
-#         return json.load(f)
 
 async def get_group_info_from_link(client, group_link):
     """Получение информации о группе по ссылке"""
@@ -60,43 +57,20 @@ async def get_group_info_from_link(client, group_link):
         'title': entity.title
     }
 
-async def create_new_account():
-    phone = input("Введите номер телефона: ")
-    api_id = input("Введите API ID: ")
-    api_hash = input("Введите API Hash: ")
-
-    client = TelegramClient(folder_session + phone, api_id, api_hash)
-    await client.connect()
-
-    if not await client.is_user_authorized():
-        await client.start(phone)
-        if await client.is_user_authorized():
-            session = phone
-            await db.add_account(api_id, api_hash, phone, session)
-            print(f"Аккаунт {phone} успешно добавлен в базу данных.")
-        else:
-            print(f"Не удалось авторизовать аккаунт {phone}.")
-            await client.disconnect()
-            return None
-    await client.disconnect()
-
 async def main():
     await on_startup()
     clients = []
 
     accounts = await db.get_accounts_from_db()  # Получение данных аккаунтов из базы данных
-    print(accounts)
 
     if not accounts:
         print("Нет доступных аккаунтов в базе данных.")
-        await create_new_account()
-        accounts = await db.get_accounts_from_db()  # Повторное получение данных аккаунтов из базы данных после добавления нового аккаунта
-        print(accounts)
+        return
 
     for account in accounts:
         api_id = account['api_id']
         api_hash = account['api_hash']
-        session = account['session_accounts']
+        session = account['session']
         phone = account['phone']
 
         client = TelegramClient(folder_session + session, api_id, api_hash)
@@ -108,7 +82,7 @@ async def main():
                 await client.start(phone)
                 if await client.is_user_authorized():
                     # Обновление сессии в базе данных
-                    db.update_account_session('./path/to/your/database.db', phone, session)
+                    await db.update_account_session(phone, session)
                 else:
                     print(f'{session} не удалось авторизоваться, пропускаем.')
                     continue
@@ -196,12 +170,7 @@ async def main():
         print(f"Ошибка при обработке группы {target_group_link}: {e}")
         traceback.print_exc()
 
-    # print("Отключение...")
-    # for my_client in clients:
-    #     await my_client['client'].disconnect()
-
     print("Работа завершена.")
 
 if __name__ == "__main__":
     asyncio.run(main())
-

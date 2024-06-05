@@ -321,17 +321,6 @@ async def cmd_id(message: types.Message):
     await message.answer(f'ID: {message.from_user.id}')
 
 
-@dp.message_handler(commands=['accounts'])
-async def invite_group(message: types.Message):
-    accounts = await db.get_accounts_from_db()
-    print(accounts)
-    for account in accounts:
-        await message.answer(f"""
-api_id:{account['api_id']}
-api_hash:{account['api_hash']}
-phone:{account['phone']}
-session:{account['session_tg']}""")
-
 
 async def check_group(message: types.Message, link):
     if 't.me' in link:
@@ -607,8 +596,17 @@ async def add_cash(message: types.Message):
 
 @admin_access
 @dp.message_handler(commands=['accounts'])
-async def cmd_accounts(message: types.Message):
-    await message.answer(await db.get_accounts_from_db())
+async def invite_group(message: types.Message):
+    accounts = await db.get_accounts_from_db()
+    print(accounts)
+    await message.answer(accounts)
+    for account in accounts:
+        await message.answer(f"""
+api_id:{account['api_id']}
+api_hash:{account['api_hash']}
+phone:{account['phone']}
+session:{account['session_tg']}""")
+        
 
 @admin_access
 @dp.message_handler(text='Добавить аккаунты')
@@ -674,7 +672,7 @@ async def code_confirmation(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['code'] = int(message.text)
         print(data['code'])
-        session = f'./bot/session_accounts/{data["phone"]}.session'
+        session = f'./session_accounts/{data["phone"]}.session'
 
     # Создаем экземпляр бота для отправки сообщений
     # bot = message.bot
@@ -695,6 +693,8 @@ async def code_confirmation(message: types.Message, state: FSMContext):
             print(2222)
             await message.answer(f"Вы успешно авторизовали аккаунт {data['phone']}.")
             print(333)
+            await db.add_account(data['api_id'], data['api_hash'], data['phone'], session)
+        else:
             await db.add_account(data['api_id'], data['api_hash'], data['phone'], session)
 
     except Exception as e:
@@ -751,10 +751,16 @@ async def proxy_password(message: types.Message, state: FSMContext):
         }
         proxies = await db.get_proxies_from_db()
         count_proxy = int(len(proxies))
-        session_proxy = f'./bot/session_proxy/proxy_{count_proxy+1}'
-
+        print(count_proxy)
+        # session_proxy = f'./session_proxy/proxy_{count_proxy+1}'
+        accounts = await db.get_accounts_from_db()
+        print(accounts)
+        account = accounts[-1]
+        print(account)
+        
+        
         # Создаем экземпляр клиента Telegram с прокси
-        client = TelegramClient(session_proxy, 'api_id', 'api_hash', proxy=proxy)
+        client = TelegramClient(account['session'], account['api_id'], account['api_hash'], proxy=proxy)
         await client.connect()
 
         if await client.is_user_authorized():
@@ -766,7 +772,7 @@ async def proxy_password(message: types.Message, state: FSMContext):
         await client.disconnect()
 
         # Сохраняем прокси в базе данных
-        # db.add_proxy(data['addr'], data['port'], data['username'], data['password'])
+        await db.add_proxy(state)
         await message.answer('Прокси добавлен в базу данных.')
 
     except Exception as e:
