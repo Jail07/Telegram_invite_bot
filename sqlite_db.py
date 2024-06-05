@@ -352,19 +352,22 @@ async def get_date():
 
 
 def bind_accounts_to_proxies():
-    cur.execute("SELECT id FROM proxies WHERE is_active = 1")
-    proxy_ids = [row[0] for row in cur.fetchall()]
+    try:
+        cur.execute("SELECT id FROM proxies WHERE is_active = 1")
+        proxy_ids = [row[0] for row in cur.fetchall()]
 
-    cur.execute("SELECT id FROM accounts WHERE is_active = 1")
-    account_ids = [row[0] for row in cur.fetchall()]
+        cur.execute("SELECT id FROM accounts WHERE is_active = 1")
+        account_ids = [row[0] for row in cur.fetchall()]
 
-    for i in range(0, len(account_ids), 2):
-        proxy_id = proxy_ids[i // 2 % len(proxy_ids)]
-        cur.execute(
-            "INSERT INTO account_proxies (account_id, proxy_id) VALUES (?, ?), (?, ?)",
-            (account_ids[i], proxy_id, account_ids[i + 1], proxy_id)
-        )
-    db.commit()
+        for i in range(0, len(account_ids), 2):
+            proxy_id = proxy_ids[i // 2 % len(proxy_ids)]
+            cur.execute(
+                "INSERT INTO account_proxies (account_id, proxy_id) VALUES (?, ?), (?, ?)",
+                (account_ids[i], proxy_id, account_ids[i + 1], proxy_id)
+            )
+        db.commit()
+    except:
+        pass
 
 
 async def send_notification_to_user(bot, tg_id, message):

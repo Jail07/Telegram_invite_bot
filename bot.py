@@ -13,10 +13,9 @@ import sqlite_db as db
 from datetime import datetime
 import logging
 import re
-import admin_bot
 from aiogram.utils.exceptions import ChatNotFound
 
-API_TOKEN = '7106820685:AAEUFXhYrPL7hIVdQPQXuVeWmLA_5MtXOko'
+API_TOKEN = '6914750786:AAFyOGIcjW955NftwyaGI4Lcu-iGlPBni10'
 
 storage = MemoryStorage()
 bot = Bot(token=API_TOKEN)
@@ -100,16 +99,6 @@ async def check_role(update: types.Update):
         print('User', user_id)
         return 'user'
 
-
-@dp.message_handler(commands=['adminka'])
-async def process_message(message: types.Message):
-    role = await check_role(message)
-    if role == 'admin':
-        await admin_bot.dp.process_update(types.Update(message=message))
-    else:
-        pass
-
-
 @dp.message_handler(commands=['groups'])
 async def show_groups(message: types.Message):
     await message.answer(await db.get_groups())
@@ -141,6 +130,8 @@ https//:sdfsfsd1/
 https//:sdfsfsd2/ 
 https//:sdfsfsd3/""")
             await NewGroup.next()
+        elif check == None:
+            await state.finish()
         else:
             await NewGroup.first()
         print(data['link'])
@@ -353,7 +344,7 @@ async def check_group(message: types.Message, link):
             chat_id = f"@{chat_id}"
     else:
         await message.reply("Неправильная ссылка или такой группы не существет", reply_markup=kb.cancel)
-        return False
+        return None
 
     try:
         chat = await bot.get_chat(chat_id)
@@ -445,7 +436,7 @@ async def weekly_report():
     sent_notifications = set()
     while True:
         try:
-            groups = await db.return_group()
+            groups = await db.get_groups()
             dates = await db.get_date()
 
             for date in dates:
@@ -795,8 +786,9 @@ async def back_to_main_menu(call):
         else:
             await cmd_start_user(message)
 
-@dp.callback_query_handler(text="cancel")
+
 @dp.message_handler(text=['Назад', 'Отменить'])
+@dp.callback_query_handler(text="cancel")
 async def back(call):
     try:
         message = call.message
